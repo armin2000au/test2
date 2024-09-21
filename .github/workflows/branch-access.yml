@@ -62,6 +62,9 @@ jobs:
 
       - name: Merge changes from current branch to main
         run: |
+          git config --global user.name "${GITHUB_ACTOR}"
+          git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          
           git checkout -b temp-branch
           git checkout main -- branch_owners.json
           git add branch_owners.json
