@@ -1,0 +1,89 @@
+name: Restrict Push Access
+
+on:
+  push:
+    branches:
+      - '*'
+  create:
+    branches:
+      - '*'  # Trigger on branch creation
+
+permissions:
+  contents: write  # Grant write access to repository contents
+
+jobs:
+  check-branch-owner:
+    runs-on: ubuntu-latest
+    name: Check Branch Owner
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Load branch ownership data
+        id: load_data
+        run: |
+          # Create a JSON file to store branch ownership if it doesn't exist
+          if [ ! -f branch_owners.json ]; then
+            echo '{}' > branch_owners.json
+          fi
+
+          # Load the current branch ownership data
+          BRANCH_OWNERS=$(cat branch_owners.json)
+          echo "Branch Owners: $BRANCH_OWNERS"
+
+          # Extract branch name (for push event)
+          if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+            BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          else
+            # For create event, use the branch name directly from the payload
+            BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          fi
+          echo "Branch Name: $BRANCH_NAME"
+
+          # Check if the branch already has an owner
+          BRANCH_CREATOR=$(echo "$BRANCH_OWNERS" | jq -r --arg BRANCH "$BRANCH_NAME" '.[$BRANCH]')
+          echo "Branch Creator from JSON: $BRANCH_CREATOR"
+
+          # If there's no owner, set the current actor as the owner
+          if [ "$BRANCH_CREATOR" == "null" ]; then
+            BRANCH_CREATOR="${GITHUB_ACTOR}"
+            # Update the JSON with the new branch owner
+            echo "$BRANCH_OWNERS" | jq --arg BRANCH "$BRANCH_NAME" --arg OWNER "$BRANCH_CREATOR" '. + {($BRANCH): $OWNER}' > branch_owners.json
+            echo "Set $BRANCH_NAME owner to $BRANCH_CREATOR"
+          fi
+
+          # Set output for later steps
+          echo "branch_creator=$BRANCH_CREATOR" >> $GITHUB_ENV
+
+      - name: Save updated branch ownership data using GitHub API
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FILE_CONTENT=$(cat branch_owners.json)
+          FILE_SHA=$(git ls-tree HEAD branch_owners.json | awk '{print $3}')
+          
+          curl -X PUT \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/contents/branch_owners.json \
+            -d '{
+              "message": "Update branch ownership for '${{ github.ref }}' ",
+              "content": "'"$(echo -n "$FILE_CONTENT" | base64)"'",
+              "sha": "'"$FILE_SHA"'"
+            }'
+
+      - name: Check if user is branch owner
+        run: |
+          OWNER="${GITHUB_ACTOR}"
+          BRANCH_CREATOR="${{ env.branch_creator }}"
+
+          echo "Current Actor: $OWNER"
+          echo "Branch Creator: $BRANCH_CREATOR"
+
+          # Check if the branch creator is the same as the current actor
+          if [[ "$BRANCH_CREATOR" != "$OWNER" ]]; then
+            echo "You do not have permission to push to this branch."
+            exit 1
+          else
+            echo "Permission granted to push to this branch."
+          fi
