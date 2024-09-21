@@ -51,6 +51,7 @@ jobs:
             echo "$BRANCH_OWNERS" | jq --arg BRANCH "$BRANCH_NAME" --arg OWNER "$BRANCH_CREATOR" '. + {($BRANCH): $OWNER}' > branch_owners.json
             echo "Set $BRANCH_NAME owner to $BRANCH_CREATOR"
           fi
+
           # Set output for later steps
           echo "branch_creator=$BRANCH_CREATOR" >> $GITHUB_ENV
 
@@ -59,10 +60,10 @@ jobs:
           git fetch origin main
           git checkout main
 
-      - name: Commit and push changes
+      - name: Merge changes from current branch to main
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          git checkout -b temp-branch
+          git checkout main -- branch_owners.json
           git add branch_owners.json
           git commit -m "Update branch ownership for ${GITHUB_REF#refs/heads/}" || echo "No changes to commit"
           git push origin main
