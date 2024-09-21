@@ -51,26 +51,21 @@ jobs:
             echo "$BRANCH_OWNERS" | jq --arg BRANCH "$BRANCH_NAME" --arg OWNER "$BRANCH_CREATOR" '. + {($BRANCH): $OWNER}' > branch_owners.json
             echo "Set $BRANCH_NAME owner to $BRANCH_CREATOR"
           fi
-
           # Set output for later steps
           echo "branch_creator=$BRANCH_CREATOR" >> $GITHUB_ENV
 
-      - name: Save updated branch ownership data using GitHub API
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout main branch for updates
         run: |
-          FILE_CONTENT=$(cat branch_owners.json)
-          FILE_SHA=$(git ls-tree HEAD branch_owners.json | awk '{print $3}')
-          
-          curl -X PUT \
-            -H "Authorization: token $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/${{ github.repository }}/contents/branch_owners.json \
-            -d '{
-              "message": "Update branch ownership for '${{ github.ref }}' ",
-              "content": "'"$(echo -n "$FILE_CONTENT" | base64)"'",
-              "sha": "'"$FILE_SHA"'"
-            }'
+          git fetch origin main
+          git checkout main
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add branch_owners.json
+          git commit -m "Update branch ownership for ${GITHUB_REF#refs/heads/}" || echo "No changes to commit"
+          git push origin main
 
       - name: Check if user is branch owner
         run: |
