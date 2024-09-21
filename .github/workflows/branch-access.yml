@@ -32,12 +32,7 @@ jobs:
           echo "Branch Owners: $BRANCH_OWNERS"
 
           # Extract branch name (for push event)
-          if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
-            BRANCH_NAME="${GITHUB_REF#refs/heads/}"
-          else
-            # For create event, use the branch name directly from the payload
-            BRANCH_NAME="${GITHUB_REF#refs/heads/}"
-          fi
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
           echo "Branch Name: $BRANCH_NAME"
 
           # Check if the branch already has an owner
@@ -55,25 +50,19 @@ jobs:
           # Set output for later steps
           echo "branch_creator=$BRANCH_CREATOR" >> $GITHUB_ENV
 
-      - name: Checkout main branch for updates
-        run: |
-          git fetch origin main
-          git checkout main
-
-      - name: Merge changes from current branch to main
+      - name: Commit and push changes to main
         run: |
           git config --global user.name "${GITHUB_ACTOR}"
           git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
 
-          # Check out a new temporary branch
-          git checkout -b temp-branch
-
-          # Stage and commit changes if any
-          git add branch_owners.json
-          git commit -m "Update branch ownership for ${GITHUB_REF#refs/heads/}" || echo "No changes to commit"
-
-          # Push changes to main
-          git push origin temp-branch:main
+          # Check if there are any changes to commit
+          if git diff --quiet; then
+            echo "No changes to commit."
+          else
+            git add branch_owners.json
+            git commit -m "Update branch ownership for ${GITHUB_REF#refs/heads/}"
+            git push origin HEAD:main
+          fi
 
       - name: Check if user is branch owner
         run: |
