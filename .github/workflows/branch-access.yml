@@ -64,12 +64,9 @@ jobs:
         run: |
           git config --global user.name "${GITHUB_ACTOR}"
           git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
-          
+
           # Check out a new temporary branch
           git checkout -b temp-branch
-
-          # Copy the updated JSON file to the temp branch if it was modified
-          cp ../branch_owners.json .
 
           # Stage and commit changes if any
           git add branch_owners.json
