@@ -23,17 +23,16 @@ jobs:
         id: load_data
         run: |
           # Create a JSON file to store branch ownership if it doesn't exist
-          if [ ! -f branch_owners.json ]; then
-            echo '{}' > branch_owners.json
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          OWNERS_FILE="./${BRANCH_NAME}_owners.json"
+          
+          if [ ! -f "$OWNERS_FILE" ]; then
+            echo '{}' > "$OWNERS_FILE"
           fi
 
           # Load the current branch ownership data
-          BRANCH_OWNERS=$(cat branch_owners.json)
+          BRANCH_OWNERS=$(cat "$OWNERS_FILE")
           echo "Branch Owners: $BRANCH_OWNERS"
-
-          # Extract branch name (for push event)
-          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
-          echo "Branch Name: $BRANCH_NAME"
 
           # Check if the branch already has an owner
           BRANCH_CREATOR=$(echo "$BRANCH_OWNERS" | jq -r --arg BRANCH "$BRANCH_NAME" '.[$BRANCH]')
@@ -43,7 +42,7 @@ jobs:
           if [ "$BRANCH_CREATOR" == "null" ]; then
             BRANCH_CREATOR="${GITHUB_ACTOR}"
             # Update the JSON with the new branch owner
-            echo "$BRANCH_OWNERS" | jq --arg BRANCH "$BRANCH_NAME" --arg OWNER "$BRANCH_CREATOR" '. + {($BRANCH): $OWNER}' > branch_owners.json
+            echo "$BRANCH_OWNERS" | jq --arg BRANCH "$BRANCH_NAME" --arg OWNER "$BRANCH_CREATOR" '. + {($BRANCH): $OWNER}' > "$OWNERS_FILE"
             echo "Set $BRANCH_NAME owner to $BRANCH_CREATOR"
           fi
 
@@ -59,7 +58,7 @@ jobs:
           if git diff --quiet; then
             echo "No changes to commit."
           else
-            git add branch_owners.json
+            git add "${BRANCH_NAME}_owners.json"
             git commit -m "Update branch ownership for ${GITHUB_REF#refs/heads/}"
             git push origin HEAD:main
           fi
