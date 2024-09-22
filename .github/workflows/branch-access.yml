@@ -19,6 +19,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Run jq
+        uses: sergeysova/jq-action@v2
+
       - name: Load branch ownership data
         id: load_data
         run: |
