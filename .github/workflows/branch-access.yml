@@ -50,6 +50,8 @@ jobs:
             echo "Set $BRANCH_NAME owner to $BRANCH_CREATOR"
             echo "Updated owners file contents:"
             cat "$OWNERS_FILE"
+          else
+            echo "Branch already has an owner: $BRANCH_CREATOR"
           fi
 
           # Set output for later steps
