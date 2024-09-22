@@ -72,9 +72,15 @@ jobs:
           git config --global user.name "${GITHUB_ACTOR}"
           git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
 
+          # Check if OWNERS_FILE has been created and is not empty
+          if [ ! -f "${OWNERS_FILE}" ]; then
+            echo "Error: ${OWNERS_FILE} does not exist."
+            exit 1
+          fi
+
           # Check if there are any changes to commit
           git add "${OWNERS_FILE}"
-          
+
           if ! git diff --cached --quiet; then
             git commit -m "Update branch ownership for ${GITHUB_REF#refs/heads/}" || { echo "Commit failed"; exit 1; }
             git push origin "${GITHUB_REF#refs/heads/}" || { echo "Push failed"; exit 1; }
@@ -89,7 +95,6 @@ jobs:
 
           echo "Current Actor: $OWNER"
           echo "Branch Creator: $BRANCH_CREATOR"
-
           # Check if the branch creator is the same as the current actor
           if [[ "$BRANCH_CREATOR" != "$OWNER" ]]; then
             echo "You do not have permission to push to this branch."
