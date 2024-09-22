@@ -54,11 +54,13 @@ jobs:
           # Set output for later steps
           echo "branch_creator=$BRANCH_CREATOR" >> $GITHUB_ENV
 
-      - name: Commit and Push Changes to Update Branch
+      - name: Commit and Push Changes to Temporary Branch
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git checkout -b update-owners  # Create a new branch for updates
+          
+          # Create a temporary branch for updates
+          git checkout -b update-owners-temp  
           
           # Fetch the latest changes from the remote
           git fetch origin update-owners || echo "No remote branch found, creating new one."
@@ -68,11 +70,19 @@ jobs:
           
           git add branch_owners.json
           git commit -m "Update branch ownership data for $BRANCH_NAME" || echo "No changes to commit."
-          git push origin update-owners  # Remove --force to avoid issues with protected branches
+          
+          # Push to temporary branch
+          git push origin update-owners-temp  
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-
+      - name: Create Pull Request to Update Owners
+        uses: peter-evans/create-pull-request@v3
+        with:
+          title: "Update Branch Ownership Data"
+          body: "This PR updates the ownership data for branch $BRANCH_NAME."
+          base: update-owners  # Target protected branch
+          head: update-owners-temp  # Source temporary branch
 
       - name: Check Push Permissions
         if: github.event_name == 'push'
@@ -90,4 +100,3 @@ jobs:
           else
             echo "Permission granted to push to this branch."
           fi
-  
