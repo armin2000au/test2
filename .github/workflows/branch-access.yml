@@ -68,7 +68,7 @@ jobs:
           
           git add branch_owners.json
           git commit -m "Update branch ownership data for $BRANCH_NAME" || echo "No changes to commit."
-          git push origin update-owners  # Push to new branch
+          git push origin update-owners --force  # Push to new branch
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
