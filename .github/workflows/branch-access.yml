@@ -1,55 +1,52 @@
-name: Restrict Push Access
+name: Branch Ownership Management
 
 on:
-  push:
-    branches:
-      - '*'
   create:
     branches:
       - '*'  # Trigger on branch creation
+  push:
+    branches:
+      - '*'  # Trigger on push events
 
 permissions:
-  contents: write  # Grant write access to repository contents
+  contents: write  # Allow write access to repository contents
 
 jobs:
-  check-branch-owner:
+  manage-branch-ownership:
     runs-on: ubuntu-latest
-    name: Check Branch Owner
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Load branch ownership data
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Load or Create Branch Ownership Data
         id: load_data
         run: |
           BRANCH_NAME="${GITHUB_REF#refs/heads/}"
-          OWNERS_FILE="main_owners.json"  # Use a consistent filename
+          OWNERS_FILE="branch_owners.json"
 
-          # Create a JSON file to store branch ownership if it doesn't exist
+          # Create a JSON file if it doesn't exist
           if [ ! -f "$OWNERS_FILE" ]; then
             echo '{}' > "$OWNERS_FILE"
             echo "Created new owners file: $OWNERS_FILE"
-          else
-            echo "Found existing owners file: $OWNERS_FILE"
           fi
 
-          # Load the current branch ownership data
+          # Load existing ownership data
           BRANCH_OWNERS=$(cat "$OWNERS_FILE")
-          echo "Branch Owners: $BRANCH_OWNERS"
-
+          
           # Check if the branch already has an owner
           BRANCH_CREATOR=$(echo "$BRANCH_OWNERS" | jq -r --arg BRANCH "$BRANCH_NAME" '.[$BRANCH]')
-          echo "Branch Creator from JSON: $BRANCH_CREATOR"
-
-          # If there's no owner, set the current actor as the owner
+          
           if [ "$BRANCH_CREATOR" == "null" ]; then
+            # Set the current actor as the owner of the new branch
             BRANCH_CREATOR="${GITHUB_ACTOR}"
-            # Update the JSON with the new branch owner
             NEW_BRANCH_OWNERS=$(echo "$BRANCH_OWNERS" | jq --arg BRANCH "$BRANCH_NAME" --arg OWNER "$BRANCH_CREATOR" '. + {($BRANCH): $OWNER}')
             echo "$NEW_BRANCH_OWNERS" > "$OWNERS_FILE"
             echo "Set $BRANCH_NAME owner to $BRANCH_CREATOR"
-            echo "Updated owners file contents:"
-            cat "$OWNERS_FILE"
           else
             echo "Branch already has an owner: $BRANCH_CREATOR"
           fi
@@ -57,44 +54,15 @@ jobs:
           # Set output for later steps
           echo "branch_creator=$BRANCH_CREATOR" >> $GITHUB_ENV
 
-      - name: Debug GITHUB_ACTOR
-        run: |
-          echo "GITHUB_ACTOR: ${GITHUB_ACTOR}"
-
-      - name: List files before commit
-        run: |
-          echo "Current directory contents:"
-          ls -la
-
-      - name: Commit and push changes
-        run: |
-          echo "Configuring git user..."
-          git config --global user.name "${GITHUB_ACTOR}"
-          git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
-
-          # Check if OWNERS_FILE has been created and is not empty
-          if [ ! -f "${OWNERS_FILE}" ]; then
-            echo "Error: ${OWNERS_FILE} does not exist."
-            exit 1
-          fi
-
-          # Check if there are any changes to commit
-          git add "${OWNERS_FILE}"
-
-          if ! git diff --cached --quiet; then
-            git commit -m "Update branch ownership for ${GITHUB_REF#refs/heads/}" || { echo "Commit failed"; exit 1; }
-            git push origin "${GITHUB_REF#refs/heads/}" || { echo "Push failed"; exit 1; }
-          else
-            echo "No changes to commit."
-          fi
-
-      - name: Check if user is branch owner
+      - name: Check Push Permissions
+        if: github.event_name == 'push'
         run: |
           OWNER="${GITHUB_ACTOR}"
           BRANCH_CREATOR="${{ env.branch_creator }}"
 
           echo "Current Actor: $OWNER"
           echo "Branch Creator: $BRANCH_CREATOR"
+
           # Check if the branch creator is the same as the current actor
           if [[ "$BRANCH_CREATOR" != "$OWNER" ]]; then
             echo "You do not have permission to push to this branch."
