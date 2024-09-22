@@ -52,6 +52,11 @@ jobs:
           # Set output for later steps
           echo "branch_creator=$BRANCH_CREATOR" >> $GITHUB_ENV
 
+      - name: List files before commit
+        run: |
+          echo "Current directory contents:"
+          ls -la
+
       - name: Commit and push changes
         run: |
           git config --global user.name "${GITHUB_ACTOR}"
