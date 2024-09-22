@@ -57,6 +57,10 @@ jobs:
           # Set output for later steps
           echo "branch_creator=$BRANCH_CREATOR" >> $GITHUB_ENV
 
+      - name: Debug GITHUB_ACTOR
+        run: |
+          echo "GITHUB_ACTOR: ${GITHUB_ACTOR}"
+
       - name: List files before commit
         run: |
           echo "Current directory contents:"
@@ -64,6 +68,7 @@ jobs:
 
       - name: Commit and push changes
         run: |
+          echo "Configuring git user..."
           git config --global user.name "${GITHUB_ACTOR}"
           git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
 
