@@ -63,14 +63,15 @@ jobs:
           # Fetch the latest changes from the remote
           git fetch origin update-owners || echo "No remote branch found, creating new one."
           
-          # Merge any changes from the remote branch
-          git merge origin/update-owners || echo "No changes to merge."
+          # Merge any changes from the remote branch with unrelated histories allowed
+          git merge origin/update-owners --allow-unrelated-histories || echo "No changes to merge."
           
           git add branch_owners.json
           git commit -m "Update branch ownership data for $BRANCH_NAME" || echo "No changes to commit."
-          git push origin update-owners --force  # Push to new branch
+          git push origin update-owners  # Remove --force to avoid issues with protected branches
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
 
       - name: Check Push Permissions
