@@ -54,13 +54,14 @@ jobs:
           # Set output for later steps
           echo "branch_creator=$BRANCH_CREATOR" >> $GITHUB_ENV
 
-      - name: Commit and Push Changes
+      - name: Commit and Push Changes to Update Branch
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+          git checkout -b update-owners  # Create a new branch for updates
           git add branch_owners.json
           git commit -m "Update branch ownership data for $BRANCH_NAME"
-          git push origin HEAD:${GITHUB_REF#refs/heads/}
+          git push origin update-owners  # Push to new branch
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
