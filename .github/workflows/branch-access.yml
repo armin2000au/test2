@@ -21,7 +21,7 @@ jobs:
 
       - name: Run jq
         uses: sergeysova/jq-action@v2
-
+            
       - name: Load branch ownership data
         id: load_data
         run: |
@@ -29,8 +29,12 @@ jobs:
           BRANCH_NAME="${GITHUB_REF#refs/heads/}"
           OWNERS_FILE="./${BRANCH_NAME}_owners.json"
           
+          # Check if the owners file exists, if not create it
           if [ ! -f "$OWNERS_FILE" ]; then
             echo '{}' > "$OWNERS_FILE"
+            echo "Created new owners file: $OWNERS_FILE"
+          else
+            echo "Found existing owners file: $OWNERS_FILE"
           fi
 
           # Load the current branch ownership data
@@ -81,3 +85,4 @@ jobs:
           else
             echo "Permission granted to push to this branch."
           fi
+
