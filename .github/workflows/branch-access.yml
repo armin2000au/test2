@@ -59,11 +59,19 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git checkout -b update-owners  # Create a new branch for updates
+          
+          # Fetch the latest changes from the remote
+          git fetch origin update-owners || echo "No remote branch found, creating new one."
+          
+          # Merge any changes from the remote branch
+          git merge origin/update-owners || echo "No changes to merge."
+          
           git add branch_owners.json
-          git commit -m "Update branch ownership data for $BRANCH_NAME"
+          git commit -m "Update branch ownership data for $BRANCH_NAME" || echo "No changes to commit."
           git push origin update-owners  # Push to new branch
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
       - name: Check Push Permissions
         if: github.event_name == 'push'
