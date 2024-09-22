@@ -45,8 +45,11 @@ jobs:
           if [ "$BRANCH_CREATOR" == "null" ]; then
             BRANCH_CREATOR="${GITHUB_ACTOR}"
             # Update the JSON with the new branch owner
-            echo "$BRANCH_OWNERS" | jq --arg BRANCH "$BRANCH_NAME" --arg OWNER "$BRANCH_CREATOR" '. + {($BRANCH): $OWNER}' > "$OWNERS_FILE"
+            NEW_BRANCH_OWNERS=$(echo "$BRANCH_OWNERS" | jq --arg BRANCH "$BRANCH_NAME" --arg OWNER "$BRANCH_CREATOR" '. + {($BRANCH): $OWNER}')
+            echo "$NEW_BRANCH_OWNERS" > "$OWNERS_FILE"
             echo "Set $BRANCH_NAME owner to $BRANCH_CREATOR"
+            echo "Updated owners file contents:"
+            cat "$OWNERS_FILE"
           fi
 
           # Set output for later steps
