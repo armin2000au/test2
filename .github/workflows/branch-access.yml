@@ -22,11 +22,10 @@ jobs:
       - name: Load branch ownership data
         id: load_data
         run: |
-          # Create a JSON file to store branch ownership if it doesn't exist
           BRANCH_NAME="${GITHUB_REF#refs/heads/}"
-          OWNERS_FILE="./${BRANCH_NAME}_owners.json"
+          OWNERS_FILE="${BRANCH_NAME}_owners.json"
           
-          # Check if the owners file exists, if not create it
+          # Create a JSON file to store branch ownership if it doesn't exist
           if [ ! -f "$OWNERS_FILE" ]; then
             echo '{}' > "$OWNERS_FILE"
             echo "Created new owners file: $OWNERS_FILE"
@@ -53,7 +52,7 @@ jobs:
           # Set output for later steps
           echo "branch_creator=$BRANCH_CREATOR" >> $GITHUB_ENV
 
-      - name: Commit and push changes to main
+      - name: Commit and push changes
         run: |
           git config --global user.name "${GITHUB_ACTOR}"
           git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
@@ -63,8 +62,8 @@ jobs:
             echo "No changes to commit."
           else
             git add "${BRANCH_NAME}_owners.json"
-            git commit -m "Update branch ownership for ${GITHUB_REF#refs/heads/}"
-            git push origin HEAD:${GITHUB_REF#refs/heads/}
+            git commit -m "Update branch ownership for ${GITHUB_REF#refs/heads/}" || { echo "Commit failed"; exit 1; }
+            git push origin "${GITHUB_REF#refs/heads/}" || { echo "Push failed"; exit 1; }
           fi
 
       - name: Check if user is branch owner
