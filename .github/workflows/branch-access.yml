@@ -19,9 +19,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Run jq
-        uses: sergeysova/jq-action@v2
-            
       - name: Load branch ownership data
         id: load_data
         run: |
@@ -67,7 +64,7 @@ jobs:
           else
             git add "${BRANCH_NAME}_owners.json"
             git commit -m "Update branch ownership for ${GITHUB_REF#refs/heads/}"
-            git push origin HEAD:main
+            git push origin HEAD:${GITHUB_REF#refs/heads/}
           fi
 
       - name: Check if user is branch owner
@@ -85,4 +82,3 @@ jobs:
           else
             echo "Permission granted to push to this branch."
           fi
-
